@@ -104,24 +104,16 @@ app.post('/understand', async (c) => {
 	}
 
 	// Using imageUrl directly
-	const resultStream = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
+	const imageArr = await base64ToUint8Array(payload.imageUrl.split(",")[1]);
+	// @cf/meta/llama-4-scout-17b-16e-instruct
+	const resultStream = await env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
 		messages: [
 			{
 				role: 'user',
-				content: [
-					{
-						type: 'text',
-						text: payload.prompt,
-					},
-					{
-						type: 'image_url',
-						image_url: {
-							url: payload.imageUrl,
-						},
-					},
-				],
+				content: payload.prompt,
 			},
 		],
+		image: imageArr,
 		stream: true,
 	});
 	c.header('Content-Encoding', 'Identity');
@@ -130,7 +122,7 @@ app.post('/understand', async (c) => {
 		for await (const chunk of chunks) {
 			if (chunk.data !== undefined && chunk.data !== '[DONE]') {
 				const data = JSON.parse(chunk.data);
-				const token = data.choices[0]?.delta.content;
+				const token = data.response;
 				if (token) {
 					stream.write(token);
 				}
