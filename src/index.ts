@@ -43,6 +43,7 @@ app.post('/understand', async (c) => {
 		}
 
 		// Using imageUrl directly
+		console.log({ prompt: payload.prompt });
 		const resultStream = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
 			messages: [
 				{
@@ -54,7 +55,9 @@ app.post('/understand', async (c) => {
 						},
 						{
 							type: 'image_url',
-							image_url: { url: payload.imageUrl },
+							image_url: {
+								url: payload.imageUrl,
+							},
 						},
 					],
 				},
@@ -67,7 +70,8 @@ app.post('/understand', async (c) => {
 			for await (const chunk of chunks) {
 				if (chunk.data !== undefined && chunk.data !== '[DONE]') {
 					const data = JSON.parse(chunk.data);
-					stream.write(data.response);
+					console.log(data);
+					stream.write(data.choices[0].delta.content);
 				}
 			}
 		});
