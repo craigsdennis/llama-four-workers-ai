@@ -15,6 +15,9 @@ body {
   margin: 0 auto;
   padding: 20px;
   line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 h1 {
@@ -109,4 +112,25 @@ button:disabled {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+.container {
+  flex: 1;
+}
+
+footer {
+  margin-top: 40px;
+  text-align: center;
+  padding: 15px 0;
+  border-top: 1px solid var(--border-color);
+  font-size: 14px;
+}
+
+footer a {
+  color: var(--accent-color);
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
 }

@@ -58,7 +58,8 @@ app.get('/check-messages-stream', async(c) => {
 		for await (const chunk of chunks) {
 			if (chunk.data !== undefined && chunk.data !== '[DONE]') {
 				const data = JSON.parse(chunk.data);
-				const token = data.choices[0]?.delta.content;
+				//console.log(data);
+				const token = data.response;
 				if (token) {
 					stream.write(token);
 				}
@@ -76,7 +77,7 @@ app.get('/check-prompt', async (c) => {
 
 app.get('/check-prompt-stream', async (c) => {
 	const resultsStream = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
-		prompt: 'Say hello world in 5 languages',
+		prompt: 'Explain the last thing you learned',
 		stream: true,
 	});
 	c.header('Content-Encoding', 'Identity');
@@ -87,7 +88,7 @@ app.get('/check-prompt-stream', async (c) => {
 				break;
 			}
 			const data = JSON.parse(chunk.data as string);
-			const token = data.choices[0]?.text;
+			const token = data.response;
 			if (token) {
 				stream.write(token);
 			}
