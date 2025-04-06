@@ -34,6 +34,39 @@ async function base64ToUint8Array(base64Image: string): Promise<number[]> {
 	return [...new Uint8Array(arrayBuffer)];
 }
 
+app.get('/check-messages', async(c) => {
+	const results = await env.AI.run("@cf/meta/llama-4-scout-17b-16e-instruct", {
+		messages: [
+			{role: "system", content: "You are a pirate, but you speak like a toddler that is a New Yorker"},
+			{role: "user", content: "Where is the buried treasure?"}
+		]
+	});
+	return c.json(results);
+});
+
+app.get('/check-messages-stream', async(c) => {
+	const resultStream = await env.AI.run("@cf/meta/llama-4-scout-17b-16e-instruct", {
+		messages: [
+			{role: "system", content: "You are out there man. You speak in stream of consciousness"},
+			{role: "user", content: "What do you think tokens taste like?"}
+		],
+		stream: true
+	});
+	c.header('Content-Encoding', 'Identity');
+	return streamText(c, async (stream) => {
+		const chunks = events(new Response(resultStream as ReadableStream));
+		for await (const chunk of chunks) {
+			if (chunk.data !== undefined && chunk.data !== '[DONE]') {
+				const data = JSON.parse(chunk.data);
+				const token = data.choices[0]?.delta.content;
+				if (token) {
+					stream.write(token);
+				}
+			}
+		}
+	});
+});
+
 app.get('/check-prompt', async (c) => {
 	const results = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
 		prompt: 'Say hello world in 5 languages',
@@ -96,7 +129,7 @@ app.post('/understand', async (c) => {
 		for await (const chunk of chunks) {
 			if (chunk.data !== undefined && chunk.data !== '[DONE]') {
 				const data = JSON.parse(chunk.data);
-				const token = data.choices[0]?.text;
+				const token = data.choices[0]?.delta.content;
 				if (token) {
 					stream.write(token);
 				}
