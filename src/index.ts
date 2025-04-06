@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { env } from "cloudflare:workers";
+import { env } from 'cloudflare:workers';
 import { streamText } from 'hono/streaming';
 import { events } from 'fetch-event-stream';
 
@@ -9,31 +9,30 @@ const app = new Hono<{ Bindings: Env }>();
  * Converts a base64 image to a Uint8Array
  */
 async function base64ToUint8Array(base64Image: string): Promise<number[]> {
-  // Remove data URL prefix if present
-  const base64 = base64Image.replace(/^data:image\/\w+;base64,/, '');
+	// Remove data URL prefix if present
+	const base64 = base64Image.replace(/^data:image\/\w+;base64,/, '');
 
-  // Create a Blob from the base64 data
-  const byteCharacters = atob(base64);
-  const byteArrays = [];
+	// Create a Blob from the base64 data
+	const byteCharacters = atob(base64);
+	const byteArrays = [];
 
-  for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-    const slice = byteCharacters.slice(offset, offset + 512);
-    const byteNumbers = new Array(slice.length);
+	for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+		const slice = byteCharacters.slice(offset, offset + 512);
+		const byteNumbers = new Array(slice.length);
 
-    for (let i = 0; i < slice.length; i++) {
-      byteNumbers[i] = slice.charCodeAt(i);
-    }
+		for (let i = 0; i < slice.length; i++) {
+			byteNumbers[i] = slice.charCodeAt(i);
+		}
 
-    byteArrays.push(new Uint8Array(byteNumbers));
-  }
+		byteArrays.push(new Uint8Array(byteNumbers));
+	}
 
-  const blob = new Blob(byteArrays);
+	const blob = new Blob(byteArrays);
 
-  // Convert Blob to ArrayBuffer, then to Uint8Array
-  const arrayBuffer = await blob.arrayBuffer();
-  return [...new Uint8Array(arrayBuffer)];
+	// Convert Blob to ArrayBuffer, then to Uint8Array
+	const arrayBuffer = await blob.arrayBuffer();
+	return [...new Uint8Array(arrayBuffer)];
 }
-
 
 app.post('/understand', async (c) => {
 	try {
@@ -44,31 +43,34 @@ app.post('/understand', async (c) => {
 		}
 
 		// Using imageUrl directly
-		const resultStream = await env.AI.run("@cf/meta/llama-4-scout-17b-16e-instruct", {
+		const resultStream = await env.AI.run('@cf/meta/llama-4-scout-17b-16e-instruct', {
 			messages: [
-				{ role: "user", content: [
-					{
-						type: "text",
-						text: payload.prompt
-					},
-					{
-						type: "image_url",
-						image_url: payload.imageUrl
-					}
-				]}
+				{
+					role: 'user',
+					content: [
+						{
+							type: 'text',
+							text: payload.prompt,
+						},
+						{
+							type: 'image_url',
+							image_url: { url: payload.imageUrl },
+						},
+					],
+				},
 			],
-			stream: true
+			stream: true,
 		});
-		c.header('Content-Encoding', 'Identity')
-  		return streamText(c, async (stream) => {
+		c.header('Content-Encoding', 'Identity');
+		return streamText(c, async (stream) => {
 			const chunks = events(new Response(resultStream as ReadableStream));
-    		for await (const chunk of chunks) {
+			for await (const chunk of chunks) {
 				if (chunk.data !== undefined && chunk.data !== '[DONE]') {
 					const data = JSON.parse(chunk.data);
 					stream.write(data.response);
 				}
 			}
-  		});
+		});
 	} catch (error) {
 		console.error('Error in /understand:', error);
 		return c.json({ error: 'Internal server error' }, 500);
